@@ -1,0 +1,505 @@
+openapi: 3.0.2
+info:
+  title: Ratenkauf Verkauf-V3 API Definition
+  description: Ratenkauf Verkauf-V3 API for ratenkauf App
+  version: V3.65.0
+tags:
+  - name: transaction
+    description: endpoints used to process a transaction
+paths:
+  /api/payment/v3/transaction:
+    post:
+      summary: Initiates a transaction based on the given request
+      description: '''
+      A transaction is created with unique identifiers (a TeamBank identifier and a functional identifier). The data in the request is validated
+      and normalised and, if necessary, corresponding error messages are returned.
+      '''
+      tags:
+        - transaction
+      security:
+        - basicAuth: []
+      requestBody:
+        $ref: '#/components/requestBodies/TransactionInitRequest'
+      responses:
+        '201':
+          $ref: '#/components/responses/TransactionInitResponse'
+        '400':
+          $ref: '#/components/responses/ConstraintViolationError'
+        '401':
+          $ref: '#/components/responses/AuthenticationError'
+        '409':
+          $ref: '#/components/responses/ConflictError'
+  /api/payment/v3/transaction/{tbTransactionId}/summary:
+    get:
+      summary: Get the necessary information regarding the transaction for checkout
+      description: '''
+        Based on the unique TeamBank identifier, the necessary information of the corresponding transaction is returned for checkout.
+      '''
+      tags:
+        - transaction
+      security:
+        - basicAuth: []
+      parameters:
+        - $ref: '#/components/parameters/tbTransactionId'
+      responses:
+        '200':
+          $ref: '#/components/responses/TransactionSummaryResponse'
+        '400':
+          $ref: '#/components/responses/ConstraintViolationError'
+        '401':
+          $ref: '#/components/responses/AuthenticationError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '409':
+          $ref: '#/components/responses/ConflictError'
+
+components:
+  securitySchemes:
+    basicAuth:
+      description: username/password -> shop identifier/ratenkauf token
+      type: http
+      scheme: basic
+  schemas:
+    TransactionInitRequest:
+      type: object
+      properties:
+        financingTerm:
+          type: integer
+          example: 6
+          description: '''
+          Duration in months, depending on individual shop conditions and order value (please check your ratenkauf widget).
+          Will be set to default value if not available.
+          '''
+        orderDetails:
+          $ref: '#/components/schemas/OrderDetails'
+        shopsystem:
+          $ref: '#/components/schemas/Shopsystem'
+        customer:
+          $ref: '#/components/schemas/Customer'
+        customerRelationship:
+          $ref: '#/components/schemas/CustomerRelationship'
+        redirectLinks:
+          $ref: '#/components/schemas/RedirectLinks'
+      required:
+        - shopIdentifier
+        - orderDetails
+        - customer
+        - redirectLinks
+    Shopsystem:
+      description: technischeShopparameter
+      type: object
+      properties:
+        shopSystemManufacturer:
+          description: Shop system manufacturer
+          type: string
+          example: Shopware 5.5.10
+        shopSystemModuleVersion:
+          description: Shop system module version
+          type: string
+          example: 1.6.3
+    OrderDetails:
+      type: object
+      properties:
+        orderValue:
+          description: Amount in €
+          type: number
+          example: 2614.79
+        orderId:
+          description: Shop transaction identifier (allows the shop to store its own reference for the transaction)
+          type: string
+          example: A1ZU560
+          pattern: "[a-zA-Z0-9\\.:\\-_/]*"
+          maxLength: 50
+        numberOfProductsInShoppingCart:
+          description: anzahlProdukteImWarenkorb
+          type: integer
+          example: 2
+        invoiceAddress:
+          $ref: '#/components/schemas/Address'
+        shippingAddress:
+          $ref: '#/components/schemas/ShippingAddress'
+        shoppingCartInformation:
+          $ref: '#/components/schemas/ShoppingCartInformation'
+      required:
+        - orderValue
+        - invoiceAddress
+        - shippingAddress
+    Customer:
+      type: object
+      properties:
+        gender:
+          description: MR = HERR, MRS = FRAU, DIVERS = DIVERS, NO_GENDER = OHNE
+          type: string
+          enum:
+            - MR
+            - MRS
+            - DIVERS
+            - NO_GENDER
+        firstName:
+          type: string
+          example: Max
+          minLength: 2
+          maxLength: 27
+          pattern: "[-a-zA-ZäüößÄÖÜ\\.\\, ]*"
+        lastName:
+          type: string
+          example: Müller
+          minLength: 2
+          maxLength: 27
+          pattern: "[-a-zA-ZäüößÄÖÜ\\.\\, ]*"
+        birthDate:
+          type: string
+          example: '1949-10-17'
+        birthName:
+          description: Buyer birth name
+          type: string
+          minLength: 2
+          maxLength: 27
+          pattern: "[-a-zA-ZäüößÄÖÜ\\.\\, ]*"
+        birthPlace:
+          description: Buyer birth place
+          type: string
+        title:
+          type: string
+          enum:
+            - PROFDR
+            - DR
+            - PROF
+            - DRDR
+        contact:
+          $ref: '#/components/schemas/Contact'
+        bank:
+          $ref: '#/components/schemas/Bank'
+        employment:
+          $ref: '#/components/schemas/Employment'
+      required:
+        - firstName
+        - lastName
+        - contact
+    Employment:
+      type: object
+      properties:
+        employmentType:
+          type: string
+          description: EMPLOYEE = ANGESTELLTER, EMPLOYEE_PUBLIC_SECTOR = ANGESTELLTER_OEFFENTLICHER_DIENST, WORKER = ARBEITER, CIVIL_SERVANT = BEAMTER, RETIREE = RENTNER, SELF_EMPLOYED = SELBSTAENDIGER, UNEMPLOYED = ARBEITSLOSER, OTHER = SONSTIGES
+          enum:
+            - EMPLOYEE
+            - EMPLOYEE_PUBLIC_SECTOR
+            - WORKER
+            - CIVIL_SERVANT
+            - RETIREE
+            - SELF_EMPLOYED
+            - UNEMPLOYED
+            - OTHER
+        monthlyNetIncome:
+          description: Income in €
+          type: number
+          example: 3000
+    Address:
+      type: object
+      properties:
+        address:
+          description: Street and street number
+          type: string
+          example: Beuthener Str. 25
+        additionalAddressInformation:
+          type: string
+          example: 3 OG
+        zip:
+          description: Postal code
+          type: string
+          example: 90471
+        city:
+          type: string
+          example: Nürnberg
+        country:
+          description: Country as 2-digit ISO code
+          type: string
+          example: DE
+      required:
+        - address
+        - zip
+        - city
+        - country
+    ShippingAddress:
+      allOf:
+        - $ref: '#/components/schemas/Address'
+        - type: object
+          properties:
+            firstName:
+              description: Should match with the first name given in the person data
+              type: string
+            lastName:
+              description: Should match with the last name given in the person data
+              type: string
+          required:
+            - firstName
+            - lastName
+    Contact:
+      type: object
+      properties:
+        email:
+          type: string
+          example: test@test.de
+          maxLength: 80
+        mobilePhoneNumber:
+          description: Required in Ratenkauf process. Can be added later if not presented when initializing.
+          type: string
+          example: 017186397426
+        skipMobilePhoneNumberCheck:
+          description: true if the field mobile phone number should not be checked
+          type: boolean
+          example: false
+        phoneNumber:
+          description: Customer phone number.
+          type: string
+      required:
+        - email
+    Bank:
+      description: International Bank Account Number
+      type: object
+      properties:
+        iban:
+          type: string
+          example: DE123456789012345678909
+    CustomerRelationship:
+      description: Risk relevant information
+      type: object
+      properties:
+        customerStatus:
+          description: NEW_CUSTOMER = NEUKUNDE, EXISTING_CUSTOMER = BESTANDSKUNDE, PREMIUM_CUSTOMER = PREMIUMKUNDE
+          type: string
+          enum:
+            - NEW_CUSTOMER
+            - EXISTING_CUSTOMER
+            - PREMIUM_CUSTOMER
+        customerSince:
+          type: string
+          format: date
+          example: '2007-10-10'
+        orderDoneWithLogin:
+          description: true if the order was placed via customer login
+          type: boolean
+          example: false
+        numberOfOrders:
+          type: integer
+          example: 3
+        negativePaymentInformation:
+          description: Indicates whether the customer has already been in late payment or has not made the payment -> NO_PAYMENT_DISRUPTION = KEINE_ZAHLUNGSSTOERUNGEN, PAYMENT_DELAY = ZAHLUNGSVERZOEGERUNG, PAYMENT_NOT_DONE = ZAHLUNGSAUSFALL, NO_INFORMATION = KEINE_INFORMATION
+          type: string
+          enum:
+            - NO_PAYMENT_DISRUPTION
+            - PAYMENT_DELAY
+            - PAYMENT_NOT_DONE
+            - NO_INFORMATION
+        riskyItemsInShoppingCart:
+          description: risikoartikelImWarenkorb
+          type: boolean
+          example: false
+        logisticsServiceProvider:
+          description: Logistics service provider for the delivery of the order
+          type: string
+          example: Hermes
+      required:
+        - orderDoneWithLogin
+    RedirectLinks:
+      description: Redirect url addresses in case of success, cancellation and denial
+      type: object
+      properties:
+        urlSuccess:
+          description: urlErfolg -> Return url address if the transaction is successful
+          type: string
+          example: https://www.poolpowershop.de/payment_easycredit/return
+        urlCancellation:
+          description: urlAbbruch -> Return url address if the transaction is canceled
+          type: string
+          example: https://zoolatino.de/module/easycreditratenkauf/canceled
+        urlDenial:
+          description: urlAblehnung -> Return url address if the transaction is denied
+          type: string
+          example: https://zoolatino.de/module/easycreditratenkauf/denied
+      required:
+        - urlSuccess
+        - urlCancellation
+        - urlDenial
+    ShoppingCartInformation:
+      type: array
+      minItems: 1
+      items:
+        $ref: '#/components/schemas/ShoppingCartInformationItem'
+    ShoppingCartInformationItem:
+      type: object
+      properties:
+        productName:
+          type: string
+          example: Washing Machine
+        quantity:
+          type: integer
+          example: 1
+        price:
+          description: Amount in €
+          type: number
+          example: 599.95
+        manufacturer:
+          type: string
+          example: Siemens
+        productCategory:
+          type: string
+          example: Household Appliances
+        articleNumber:
+          description: Article number of a product
+          type: array
+          items:
+            $ref: '#/components/schemas/ArticleNumberItem'
+      required:
+        - productName
+        - quantity
+        - price
+    ArticleNumberItem:
+      type: object
+      properties:
+        numberType:
+          description: Number type of the article
+          type: string
+          example: GTIN
+        number:
+          description: Article number of the given type
+          type: string
+          example: 1111111
+      required:
+        - numberType
+        - number
+    TransactionInitResponse:
+      type: object
+      properties:
+        tbTransactionIdentifier:
+          description: Unique TeamBank transaction identifier
+          type: string
+          example: 1.de.4145.1-0303135329-211
+        functionalTransactionIdentifier:
+          description: Unique functional transaction identifier (consists of 6 characters)
+          type: string
+          example: EWZEN7
+        deviceIdentToken:
+          description: Verification token to identify the device
+          type: string
+          example: bd982c1b-f830-4ebc-9cfd-6ca28c17adeb
+        timestamp:
+          type: string
+          format: date-time
+          example: '2021-03-04T14:41:09.002Z'
+    TransactionSummaryResponse:
+      type: object
+      properties:
+        orderValue:
+          description: Amount of the order value in € ( = Bestellwert in €)
+          type: number
+          example: 2614.79
+        interest:
+          description: Amount of the interest accrued in € ( = anfallender Zinsbetrag in €)
+          type: number
+          example: 234.56
+        totalValue:
+          description: Amount of the total value in € ( = Gesamtsumme in €)
+          type: number
+          example: 2849.35
+        decisionOutcome:
+          description: Outcome of the credit decision
+          type: string
+          example: POSITIVE
+          enum:
+            - POSITIVE
+            - NEGATIVE
+    ConstraintViolation:
+      type: object
+      properties:
+        title:
+          type: string
+        violations:
+          type: array
+          minItems: 1
+          items:
+            type: object
+            properties:
+              field:
+                type: string
+              message:
+                type: string
+            required:
+              - field
+              - message
+      required:
+        - title
+        - violations
+    ServerError:
+      type: object
+      properties:
+        title:
+          type: string
+        detail:
+          type: string
+    AuthenticationError:
+      type: object
+      properties:
+        title:
+          type: string
+        detail:
+          type: string
+  parameters:
+    tbTransactionId:
+      name: tbTransactionId
+      in: path
+      description: Unique TeamBank transaction identifier
+      required: true
+      schema:
+        type: string
+  requestBodies:
+    TransactionInitRequest:
+      description: init request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/TransactionInitRequest'
+  responses:
+    default:
+      description: Internal server error or error from third party services
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ServerError'
+    TransactionInitResponse:
+      description: Transaction data
+      content:
+        application/hal+json:
+          schema:
+            $ref: '#/components/schemas/TransactionInitResponse'
+    TransactionSummaryResponse:
+      description: Transaction summary data for checkout
+      content:
+        application/hal+json:
+          schema:
+            $ref: '#/components/schemas/TransactionSummaryResponse'
+    ConstraintViolationError:
+      description: The request is invalid and has one or more constraint violations.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ConstraintViolation'
+    NotFoundError:
+      description: The request could not be completed due to an entity that was not found.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ConstraintViolation'
+    ConflictError:
+      description: The request could not be completed due to a conflict with the current server state.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ConstraintViolation'
+    AuthenticationError:
+      description: The request has not been applied because it lacks valid authentication credentials.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/AuthenticationError'
