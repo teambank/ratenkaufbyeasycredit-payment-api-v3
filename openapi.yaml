@@ -2,22 +2,77 @@ openapi: 3.0.2
 info:
   title: Ratenkauf Verkauf-V3 API Definition
   description: Ratenkauf Verkauf-V3 API for ratenkauf App
-  version: V3.65.0
+  version: V3.68.0
 tags:
+  - name: webshop
+    description: endpoints for operations regarding a webshop
   - name: transaction
-    description: endpoints used to process a transaction
+    description: '''
+    -- endpoints used to process a transaction --
+
+    -- BODY SIGNATURE --
+    All Transaction endpoints support body signature.
+    If this feature is activated (in your self-service-portal), you need to send a signature header with name "Content-signature".
+    Please use the following:
+        sha256={ Sha256( yourJsonBody + signatureSecret ) }
+    example: Content-signature: sha256=02ad96c7e912936939f2d7a25ca67e20a2b464c8737a2f3a9ccb46635e4a9f02
+    Please note that you need to normalize the body, i.e. remove all newlines "\n", carriage returns "\r" and tabulator spaces "\t".
+    If you do not send a signature or if signature validation fails -> HTTP 400.
+    The signature response from our service is in the same format.
+    '''
 paths:
+  /api/payment/v3/webshop/integrationcheck:
+    post:
+      summary: Verifies the correctness of the merchant's authentication credentials and, if enabled, the body signature
+      description: '''
+      After integrating the authentication credentials (basic auth: webshop id/ratenkauf token) and possibly enabling the body signature feature,
+      the merchant can check its correctness.
+      '''
+      tags:
+        - webshop
+      security:
+        - basicAuth: [ ]
+      requestBody:
+        $ref: '#/components/requestBodies/IntegrationCheckRequest'
+      responses:
+        '200':
+          $ref: '#/components/responses/IntegrationCheckResponse'
+        '400':
+          $ref: '#/components/responses/ConstraintViolationError'
+        '401':
+          $ref: '#/components/responses/AuthenticationError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+  /api/payment/v3/webshop:
+    get:
+      summary: Get the necessary information about the webshop
+      description: '''
+        This API returns the necessary information of the corresponding webshop. This includes max and min financing amount,
+        interest rate, test mode and current availability information
+        '''
+      tags:
+        - webshop
+      security:
+        - basicAuth: [ ]
+      responses:
+        '200':
+          $ref: '#/components/responses/WebshopResponse'
+        '401':
+          $ref: '#/components/responses/AuthenticationError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
   /api/payment/v3/transaction:
     post:
       summary: Initiates a transaction based on the given request
       description: '''
-      A transaction is created with unique identifiers (a TeamBank identifier and a functional identifier). The data in the request is validated
-      and normalised and, if necessary, corresponding error messages are returned.
+      A transaction is created with unique identifiers (a TeamBank identifier <technicalTransactionId> and a functional identifier <transactionId>).
+      The data in the request is validated and normalised and, if necessary, corresponding error messages are returned.
+      Supports body signature.
       '''
       tags:
         - transaction
       security:
-        - basicAuth: []
+        - basicAuth: [ ]
       requestBody:
         $ref: '#/components/requestBodies/TransactionInitRequest'
       responses:
@@ -27,20 +82,21 @@ paths:
           $ref: '#/components/responses/ConstraintViolationError'
         '401':
           $ref: '#/components/responses/AuthenticationError'
-        '409':
-          $ref: '#/components/responses/ConflictError'
-  /api/payment/v3/transaction/{tbTransactionId}/summary:
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+  /api/payment/v3/transaction/{technicalTransactionId}/summary:
     get:
       summary: Get the necessary information regarding the transaction for checkout
       description: '''
-        Based on the unique TeamBank identifier, the necessary information of the corresponding transaction is returned for checkout.
+      Based on the unique TeamBank identifier, the necessary information of the corresponding transaction is returned for checkout.
+      Supports body signature.
       '''
       tags:
         - transaction
       security:
-        - basicAuth: []
+        - basicAuth: [ ]
       parameters:
-        - $ref: '#/components/parameters/tbTransactionId'
+        - $ref: '#/components/parameters/technicalTransactionId'
       responses:
         '200':
           $ref: '#/components/responses/TransactionSummaryResponse'
@@ -48,18 +104,69 @@ paths:
           $ref: '#/components/responses/ConstraintViolationError'
         '401':
           $ref: '#/components/responses/AuthenticationError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
         '404':
           $ref: '#/components/responses/NotFoundError'
-        '409':
-          $ref: '#/components/responses/ConflictError'
-
+  /api/payment/v3/transaction/{technicalTransactionId}/preAuthorization:
+    get:
+      summary: Returns the preauthorization status of a transaction
+      description: '''
+          The preauthorization status of a transaction will be returned.
+          '''
+      tags:
+        - transaction
+      security:
+        - basicAuth: [ ]
+      parameters:
+        - $ref: '#/components/parameters/technicalTransactionId'
+      responses:
+        '200':
+          $ref: '#/components/responses/PreauthorizationStatusResponse'
+        '400':
+          $ref: '#/components/responses/ConstraintViolationError'
+        '401':
+          $ref: '#/components/responses/AuthenticationError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+    post:
+      summary: Preauthorizes a transaction after finishing the process in a webshop
+      description: '''
+        The preauthorization of a transaction will be triggered asynchronous.
+        After processing all necessary checks there will be an optional callback to the url that was provided in initialization and you can get the
+        updated status information.
+        '''
+      tags:
+        - transaction
+      security:
+        - basicAuth: [ ]
+      parameters:
+        - $ref: '#/components/parameters/technicalTransactionId'
+      responses:
+        '202':
+          description: accepted for processing
+        '400':
+          $ref: '#/components/responses/ConstraintViolationError'
+        '401':
+          $ref: '#/components/responses/AuthenticationError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
 components:
   securitySchemes:
     basicAuth:
-      description: username/password -> shop identifier/ratenkauf token
+      description: username/password -> webshop id/ratenkauf token
       type: http
       scheme: basic
   schemas:
+    IntegrationCheckRequest:
+      type: object
+      properties:
+        message:
+          type: string
+          description: For a valid request, the value can be any string but cannot be empty
+          example: ratenkauf by easyCredit
+      required:
+        - message
     TransactionInitRequest:
       type: object
       properties:
@@ -205,6 +312,7 @@ components:
         additionalAddressInformation:
           type: string
           example: 3 OG
+          maxLength: 50
         zip:
           description: Postal code
           type: string
@@ -318,6 +426,12 @@ components:
           description: urlAblehnung -> Return url address if the transaction is denied
           type: string
           example: https://zoolatino.de/module/easycreditratenkauf/denied
+        urlPreAuthorizationCallback:
+          description: '''
+          Optional Callback-Url for preAuthorization endpoint.
+          If provided the callback will be performed, else not.
+          '''
+          type: string
       required:
         - urlSuccess
         - urlCancellation
@@ -369,14 +483,41 @@ components:
       required:
         - numberType
         - number
+    IntegrationCheckResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          description: Same message that was sent in the corresponding request
+          example: ratenkauf by easyCredit
+    WebshopResponse:
+      type: object
+      properties:
+        maxFinancingAmount:
+          type: integer
+          example: 10000
+        minFinancingAmount:
+          type: integer
+          example: 200
+        interestRate:
+          type: number
+          example: 8.50
+        availability:
+          description: true if financing is available from this webshop
+          type: boolean
+          example: true
+        testMode:
+          description: true if the webshop is in test mode
+          type: boolean
+          example: false
     TransactionInitResponse:
       type: object
       properties:
-        tbTransactionIdentifier:
+        technicalTransactionId:
           description: Unique TeamBank transaction identifier
           type: string
           example: 1.de.4145.1-0303135329-211
-        functionalTransactionIdentifier:
+        transactionId:
           description: Unique functional transaction identifier (consists of 6 characters)
           type: string
           example: EWZEN7
@@ -410,6 +551,15 @@ components:
           enum:
             - POSITIVE
             - NEGATIVE
+    PreauthorizationStatusResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum:
+            - PREAUTHORIZED
+            - PENDING
+            - CANCELED
     ConstraintViolation:
       type: object
       properties:
@@ -446,14 +596,20 @@ components:
         detail:
           type: string
   parameters:
-    tbTransactionId:
-      name: tbTransactionId
+    technicalTransactionId:
+      name: technicalTransactionId
       in: path
       description: Unique TeamBank transaction identifier
       required: true
       schema:
         type: string
   requestBodies:
+    IntegrationCheckRequest:
+      description: integration check request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/IntegrationCheckRequest'
     TransactionInitRequest:
       description: init request
       content:
@@ -467,6 +623,24 @@ components:
         application/problem+json:
           schema:
             $ref: '#/components/schemas/ServerError'
+    IntegrationCheckResponse:
+      description: The authentication credentials and, if enabled, the body signature are valid
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/IntegrationCheckResponse'
+    PreauthorizationStatusResponse:
+      description: Status of a preauthorization
+      content:
+        application/hal+json:
+          schema:
+            $ref: '#/components/schemas/PreauthorizationStatusResponse'
+    WebshopResponse:
+      description: Ratenkauf information about a webshop
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/WebshopResponse'
     TransactionInitResponse:
       description: Transaction data
       content:
@@ -485,21 +659,21 @@ components:
         application/problem+json:
           schema:
             $ref: '#/components/schemas/ConstraintViolation'
-    NotFoundError:
-      description: The request could not be completed due to an entity that was not found.
-      content:
-        application/problem+json:
-          schema:
-            $ref: '#/components/schemas/ConstraintViolation'
-    ConflictError:
-      description: The request could not be completed due to a conflict with the current server state.
-      content:
-        application/problem+json:
-          schema:
-            $ref: '#/components/schemas/ConstraintViolation'
     AuthenticationError:
       description: The request has not been applied because it lacks valid authentication credentials.
       content:
         application/problem+json:
           schema:
             $ref: '#/components/schemas/AuthenticationError'
+    ForbiddenError:
+      description: The request could not be completed due to permanent denial of access to a resource or entity.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ConstraintViolation'
+    NotFoundError:
+      description: The request could not be completed due to an entity that was not found.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ConstraintViolation'
