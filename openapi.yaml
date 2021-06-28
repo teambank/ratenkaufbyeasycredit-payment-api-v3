@@ -1,514 +1,208 @@
 openapi: 3.0.2
 info:
-  description: Ratenkauf Verkauf-V3 API for ratenkauf App
   title: Ratenkauf Verkauf-V3 API Definition
-  version: V3.68.3
-servers:
-- url: /
+  description: Ratenkauf Verkauf-V3 API for ratenkauf App
+  version: V3.70.0
 tags:
-- description: endpoints for operations regarding a webshop
-  name: webshop
-- description: |-
-    ' -- endpoints used to process a transaction --
-    -- BODY SIGNATURE -- All Transaction endpoints support body signature. If this feature is activated (in your self-service-portal), you need to send a signature header with name "Content-signature". Please use the following: sha256={ Sha256( yourJsonBody + signatureSecret ) } example: Content-signature: sha256=02ad96c7e912936939f2d7a25ca67e20a2b464c8737a2f3a9ccb46635e4a9f02 Please note that you need to normalize the body, i.e. remove all newlines "\n", carriage returns "\r" and tabulator spaces "\t". If you do not send a signature or if signature validation fails -> HTTP 400. The signature response from our service is in the same format. '
-  name: transaction
+  - name: webshop
+    description: endpoints for operations regarding a webshop
+  - name: transaction
+    description: '''
+    -- endpoints used to process a transaction --
+
+    -- BODY SIGNATURE --
+    All Transaction endpoints support body signature.
+    If this feature is activated (in your self-service-portal), you need to send a signature header with name "Content-signature".
+    Please use the following:
+        sha256={ Sha256( yourJsonBody + signatureSecret ) }
+    example: Content-signature: sha256=02ad96c7e912936939f2d7a25ca67e20a2b464c8737a2f3a9ccb46635e4a9f02
+    Please note that you need to normalize the body, i.e. remove all newlines "\n", carriage returns "\r" and tabulator spaces "\t".
+    If you do not send a signature or if signature validation fails -> HTTP 400.
+    The signature response from our service is in the same format.
+    '''
 paths:
   /api/payment/v3/webshop/integrationcheck:
     post:
-      description: ''' After integrating the authentication credentials (basic auth:
-        webshop id/ratenkauf token) and possibly enabling the body signature feature,
-        the merchant can check its correctness. '''
+      summary: Verifies the correctness of the merchant's authentication credentials and, if enabled, the body signature
+      description: '''
+      After integrating the authentication credentials (basic auth: webshop id/ratenkauf token) and possibly enabling the body signature feature,
+      the merchant can check its correctness.
+      '''
+      tags:
+        - webshop
+      security:
+        - basicAuth: [ ]
       requestBody:
         $ref: '#/components/requestBodies/IntegrationCheckRequest'
       responses:
-        200:
-          content:
-            application/problem+json:
-              schema:
-                $ref: '#/components/schemas/IntegrationCheckResponse'
-          description: The authentication credentials and, if enabled, the body signature
-            are valid
-        400:
-          content:
-            application/problem+json:
-              schema:
-                $ref: '#/components/schemas/ConstraintViolation'
-          description: The request is invalid and has one or more constraint violations.
-        401:
-          content:
-            application/problem+json:
-              schema:
-                $ref: '#/components/schemas/AuthenticationError'
-          description: The request has not been applied because it lacks valid authentication
-            credentials.
-        403:
-          content:
-            application/problem+json:
-              schema:
-                $ref: '#/components/schemas/ConstraintViolation'
-          description: The request could not be completed due to permanent denial
-            of access to a resource or entity.
-      security:
-      - basicAuth: []
-      summary: Verifies the correctness of the merchant's authentication credentials
-        and, if enabled, the body signature
-      tags:
-      - webshop
+        '200':
+          $ref: '#/components/responses/IntegrationCheckResponse'
+        '400':
+          $ref: '#/components/responses/ConstraintViolationError'
+        '401':
+          $ref: '#/components/responses/AuthenticationError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
   /api/payment/v3/webshop:
     get:
-      description: ''' This API returns the necessary information of the corresponding
-        webshop. This includes max and min financing amount, interest rate, test mode
-        and current availability information '''
-      responses:
-        200:
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/WebshopResponse'
-          description: Ratenkauf information about a webshop
-        401:
-          content:
-            application/problem+json:
-              schema:
-                $ref: '#/components/schemas/AuthenticationError'
-          description: The request has not been applied because it lacks valid authentication
-            credentials.
-        403:
-          content:
-            application/problem+json:
-              schema:
-                $ref: '#/components/schemas/ConstraintViolation'
-          description: The request could not be completed due to permanent denial
-            of access to a resource or entity.
-      security:
-      - basicAuth: []
       summary: Get the necessary information about the webshop
+      description: '''
+        This API returns the necessary information of the corresponding webshop. This includes max and min financing amount,
+        interest rate, test mode, current availability information and privacy approval form
+        '''
       tags:
-      - webshop
+        - webshop
+      security:
+        - basicAuth: [ ]
+      responses:
+        '200':
+          $ref: '#/components/responses/WebshopResponse'
+        '401':
+          $ref: '#/components/responses/AuthenticationError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
   /api/payment/v3/transaction:
     post:
-      description: ''' A transaction is created with unique identifiers (a TeamBank
-        identifier <technicalTransactionId> and a functional identifier <transactionId>).
-        The data in the request is validated and normalised and, if necessary, corresponding
-        error messages are returned. Supports body signature. '''
+      summary: Initiates a transaction based on the given request
+      description: '''
+      A transaction is created with unique identifiers (a TeamBank identifier <technicalTransactionId> and a functional identifier <transactionId>).
+      The data in the request is validated and normalised and, if necessary, corresponding error messages are returned.
+      Supports body signature.
+      '''
+      tags:
+        - transaction
+      security:
+        - basicAuth: [ ]
       requestBody:
         $ref: '#/components/requestBodies/TransactionInitRequest'
       responses:
-        201:
-          content:
-            application/hal+json:
-              schema:
-                $ref: '#/components/schemas/TransactionInitResponse'
-          description: Transaction data
-        400:
-          content:
-            application/problem+json:
-              schema:
-                $ref: '#/components/schemas/ConstraintViolation'
-          description: The request is invalid and has one or more constraint violations.
-        401:
-          content:
-            application/problem+json:
-              schema:
-                $ref: '#/components/schemas/AuthenticationError'
-          description: The request has not been applied because it lacks valid authentication
-            credentials.
-        403:
-          content:
-            application/problem+json:
-              schema:
-                $ref: '#/components/schemas/ConstraintViolation'
-          description: The request could not be completed due to permanent denial
-            of access to a resource or entity.
-      security:
-      - basicAuth: []
-      summary: Initiates a transaction based on the given request
-      tags:
-      - transaction
+        '201':
+          $ref: '#/components/responses/TransactionInitResponse'
+        '400':
+          $ref: '#/components/responses/ConstraintViolationError'
+        '401':
+          $ref: '#/components/responses/AuthenticationError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
   /api/payment/v3/transaction/{technicalTransactionId}:
     patch:
-      description: Based on the unique TeamBank identifier, transaction's specific
-        data is modified. Supports body signature.
+      summary: Updates a transaction based on the given request
+      description: Based on the unique TeamBank identifier, transaction's specific data is modified. Supports body signature.
+      tags:
+        - transaction
+      security:
+        - basicAuth: [ ]
       parameters:
-      - description: Unique TeamBank transaction identifier
-        explode: false
-        in: path
-        name: technicalTransactionId
-        required: true
-        schema:
-          type: string
-        style: simple
+        - $ref: '#/components/parameters/technicalTransactionId'
       requestBody:
         $ref: '#/components/requestBodies/TransactionUpdateRequest'
       responses:
-        200:
-          content:
-            application/hal+json:
-              schema:
-                $ref: '#/components/schemas/TransactionSummaryResponse'
-          description: Transaction updated data
-        400:
-          content:
-            application/problem+json:
-              schema:
-                $ref: '#/components/schemas/ConstraintViolation'
-          description: The request is invalid and has one or more constraint violations.
-        401:
-          content:
-            application/problem+json:
-              schema:
-                $ref: '#/components/schemas/AuthenticationError'
-          description: The request has not been applied because it lacks valid authentication
-            credentials.
-        403:
-          content:
-            application/problem+json:
-              schema:
-                $ref: '#/components/schemas/ConstraintViolation'
-          description: The request could not be completed due to permanent denial
-            of access to a resource or entity.
-        404:
-          content:
-            application/problem+json:
-              schema:
-                $ref: '#/components/schemas/ConstraintViolation'
-          description: The request could not be completed due to an entity that was
-            not found.
-      security:
-      - basicAuth: []
-      summary: Updates a transaction based on the given request
-      tags:
-      - transaction
+        '200':
+          $ref: '#/components/responses/TransactionUpdateResponse'
+        '400':
+          $ref: '#/components/responses/ConstraintViolationError'
+        '401':
+          $ref: '#/components/responses/AuthenticationError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
   /api/payment/v3/transaction/{technicalTransactionId}/summary:
     get:
-      description: ''' Based on the unique TeamBank identifier, the necessary information
-        of the corresponding transaction is returned for checkout. Supports body signature.
-        '''
-      parameters:
-      - description: Unique TeamBank transaction identifier
-        explode: false
-        in: path
-        name: technicalTransactionId
-        required: true
-        schema:
-          type: string
-        style: simple
-      responses:
-        200:
-          content:
-            application/hal+json:
-              schema:
-                $ref: '#/components/schemas/TransactionSummaryResponse'
-          description: Transaction summary data for checkout
-        400:
-          content:
-            application/problem+json:
-              schema:
-                $ref: '#/components/schemas/ConstraintViolation'
-          description: The request is invalid and has one or more constraint violations.
-        401:
-          content:
-            application/problem+json:
-              schema:
-                $ref: '#/components/schemas/AuthenticationError'
-          description: The request has not been applied because it lacks valid authentication
-            credentials.
-        403:
-          content:
-            application/problem+json:
-              schema:
-                $ref: '#/components/schemas/ConstraintViolation'
-          description: The request could not be completed due to permanent denial
-            of access to a resource or entity.
-        404:
-          content:
-            application/problem+json:
-              schema:
-                $ref: '#/components/schemas/ConstraintViolation'
-          description: The request could not be completed due to an entity that was
-            not found.
-      security:
-      - basicAuth: []
       summary: Get the necessary information regarding the transaction for checkout
+      description: '''
+      Based on the unique TeamBank identifier, the necessary information of the corresponding transaction is returned for checkout.
+      Supports body signature.
+      '''
       tags:
-      - transaction
+        - transaction
+      security:
+        - basicAuth: [ ]
+      parameters:
+        - $ref: '#/components/parameters/technicalTransactionId'
+      responses:
+        '200':
+          $ref: '#/components/responses/TransactionSummaryResponse'
+        '400':
+          $ref: '#/components/responses/ConstraintViolationError'
+        '401':
+          $ref: '#/components/responses/AuthenticationError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
   /api/payment/v3/transaction/{technicalTransactionId}/authorization:
     get:
-      description: ''' The authorization status of a transaction will be returned.
-        '''
-      parameters:
-      - description: Unique TeamBank transaction identifier
-        explode: false
-        in: path
-        name: technicalTransactionId
-        required: true
-        schema:
-          type: string
-        style: simple
-      responses:
-        200:
-          content:
-            application/hal+json:
-              schema:
-                $ref: '#/components/schemas/AuthorizationStatusResponse'
-          description: Status of an authorization
-        400:
-          content:
-            application/problem+json:
-              schema:
-                $ref: '#/components/schemas/ConstraintViolation'
-          description: The request is invalid and has one or more constraint violations.
-        401:
-          content:
-            application/problem+json:
-              schema:
-                $ref: '#/components/schemas/AuthenticationError'
-          description: The request has not been applied because it lacks valid authentication
-            credentials.
-        404:
-          content:
-            application/problem+json:
-              schema:
-                $ref: '#/components/schemas/ConstraintViolation'
-          description: The request could not be completed due to an entity that was
-            not found.
-      security:
-      - basicAuth: []
       summary: Returns the authorization status of a transaction
+      description: '''
+          The authorization status of a transaction will be returned.
+          '''
       tags:
-      - transaction
+        - transaction
+      security:
+        - basicAuth: [ ]
+      parameters:
+        - $ref: '#/components/parameters/technicalTransactionId'
+      responses:
+        '200':
+          $ref: '#/components/responses/AuthorizationStatusResponse'
+        '400':
+          $ref: '#/components/responses/ConstraintViolationError'
+        '401':
+          $ref: '#/components/responses/AuthenticationError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
   /api/payment/v3/transaction/{technicalTransactionId}/preAuthorization:
     post:
-      description: ''' The preauthorization of a transaction will be triggered asynchronous.
-        After processing all necessary checks there will be an optional callback to
-        the url that was provided in initialization and you can get the updated status
-        information. '''
-      parameters:
-      - description: Unique TeamBank transaction identifier
-        explode: false
-        in: path
-        name: technicalTransactionId
-        required: true
-        schema:
-          type: string
-        style: simple
-      responses:
-        202:
-          description: accepted for processing
-        400:
-          content:
-            application/problem+json:
-              schema:
-                $ref: '#/components/schemas/ConstraintViolation'
-          description: The request is invalid and has one or more constraint violations.
-        401:
-          content:
-            application/problem+json:
-              schema:
-                $ref: '#/components/schemas/AuthenticationError'
-          description: The request has not been applied because it lacks valid authentication
-            credentials.
-        403:
-          content:
-            application/problem+json:
-              schema:
-                $ref: '#/components/schemas/ConstraintViolation'
-          description: The request could not be completed due to permanent denial
-            of access to a resource or entity.
-      security:
-      - basicAuth: []
       summary: Preauthorizes a transaction after finishing the process in a webshop
+      description: '''
+        The preauthorization of a transaction will be triggered asynchronous.
+        After processing all necessary checks there will be an optional callback to the url that was provided in initialization and you can get the
+        updated status information.
+        '''
       tags:
-      - transaction
+        - transaction
+      security:
+        - basicAuth: [ ]
+      parameters:
+        - $ref: '#/components/parameters/technicalTransactionId'
+      responses:
+        '202':
+          description: accepted for processing
+        '400':
+          $ref: '#/components/responses/ConstraintViolationError'
+        '401':
+          $ref: '#/components/responses/AuthenticationError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '409':
+          $ref: '#/components/responses/ConflictError'
 components:
-  parameters:
-    technicalTransactionId:
-      description: Unique TeamBank transaction identifier
-      explode: false
-      in: path
-      name: technicalTransactionId
-      required: true
-      schema:
-        type: string
-      style: simple
-  requestBodies:
-    IntegrationCheckRequest:
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/IntegrationCheckRequest'
-      description: integration check request
-    TransactionInitRequest:
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/TransactionInitRequest'
-      description: init request
-    TransactionUpdateRequest:
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/TransactionUpdateRequest'
-      description: update request
-  responses:
-    default:
-      content:
-        application/problem+json:
-          schema:
-            $ref: '#/components/schemas/ServerError'
-      description: Internal server error or error from third party services
-    IntegrationCheckResponse:
-      content:
-        application/problem+json:
-          schema:
-            $ref: '#/components/schemas/IntegrationCheckResponse'
-      description: The authentication credentials and, if enabled, the body signature
-        are valid
-    AuthorizationStatusResponse:
-      content:
-        application/hal+json:
-          schema:
-            $ref: '#/components/schemas/AuthorizationStatusResponse'
-      description: Status of an authorization
-    WebshopResponse:
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/WebshopResponse'
-      description: Ratenkauf information about a webshop
-    TransactionInitResponse:
-      content:
-        application/hal+json:
-          schema:
-            $ref: '#/components/schemas/TransactionInitResponse'
-      description: Transaction data
-    TransactionUpdateResponse:
-      content:
-        application/hal+json:
-          schema:
-            $ref: '#/components/schemas/TransactionSummaryResponse'
-      description: Transaction updated data
-    TransactionSummaryResponse:
-      content:
-        application/hal+json:
-          schema:
-            $ref: '#/components/schemas/TransactionSummaryResponse'
-      description: Transaction summary data for checkout
-    ConstraintViolationError:
-      content:
-        application/problem+json:
-          schema:
-            $ref: '#/components/schemas/ConstraintViolation'
-      description: The request is invalid and has one or more constraint violations.
-    AuthenticationError:
-      content:
-        application/problem+json:
-          schema:
-            $ref: '#/components/schemas/AuthenticationError'
-      description: The request has not been applied because it lacks valid authentication
-        credentials.
-    ForbiddenError:
-      content:
-        application/problem+json:
-          schema:
-            $ref: '#/components/schemas/ConstraintViolation'
-      description: The request could not be completed due to permanent denial of access
-        to a resource or entity.
-    NotFoundError:
-      content:
-        application/problem+json:
-          schema:
-            $ref: '#/components/schemas/ConstraintViolation'
-      description: The request could not be completed due to an entity that was not
-        found.
+  securitySchemes:
+    basicAuth:
+      description: username/password -> webshop id/ratenkauf token
+      type: http
+      scheme: basic
   schemas:
     IntegrationCheckRequest:
-      example:
-        message: ratenkauf by easyCredit
+      type: object
       properties:
         message:
-          description: For a valid request, the value can be any string but cannot
-            be empty
-          example: ratenkauf by easyCredit
           type: string
+          description: For a valid request, the value can be any string but cannot be empty
+          example: ratenkauf by easyCredit
       required:
-      - message
-      type: object
+        - message
     TransactionInitRequest:
-      example:
-        orderDetails:
-          orderId: A1ZU560
-          numberOfProductsInShoppingCart: 2
-          invoiceAddress:
-            zip: "90471"
-            country: DE
-            address: Beuthener Str. 25
-            city: Nürnberg
-            additionalAddressInformation: 3 OG
-          shoppingCartInformation:
-          - quantity: 1
-            articleNumber:
-            - number: "1111111"
-              numberType: GTIN
-            - number: "1111111"
-              numberType: GTIN
-            price: 599.95
-            productName: Washing Machine
-            manufacturer: Siemens
-            productCategory: Household Appliances
-          - quantity: 1
-            articleNumber:
-            - number: "1111111"
-              numberType: GTIN
-            - number: "1111111"
-              numberType: GTIN
-            price: 599.95
-            productName: Washing Machine
-            manufacturer: Siemens
-            productCategory: Household Appliances
-          orderValue: 2614.79
-        redirectLinks:
-          urlSuccess: https://www.poolpowershop.de/payment_easycredit/return
-          urlPreAuthorizationCallback: urlPreAuthorizationCallback
-          urlDenial: https://zoolatino.de/module/easycreditratenkauf/denied
-          urlCancellation: https://zoolatino.de/module/easycreditratenkauf/canceled
-        shopsystem:
-          shopSystemModuleVersion: 1.6.3
-          shopSystemManufacturer: Shopware 5.5.10
-        customerRelationship:
-          customerStatus: NEW_CUSTOMER
-          customerSince: 2007-10-10T00:00:00.000+0000
-          orderDoneWithLogin: false
-          riskyItemsInShoppingCart: false
-          logisticsServiceProvider: Hermes
-          numberOfOrders: 3
-          negativePaymentInformation: NO_PAYMENT_DISRUPTION
-        financingTerm: 6
-        customer:
-          firstName: Max
-          lastName: Müller
-          birthPlace: birthPlace
-          bank:
-            iban: DE123456789012345678909
-          gender: MR
-          contact:
-            mobilePhoneNumber: "17186397426"
-            skipMobilePhoneNumberCheck: false
-            phoneNumber: phoneNumber
-            email: test@test.de
-          employment:
-            monthlyNetIncome: 3000
-            employmentType: EMPLOYEE
-          title: PROFDR
-          birthDate: 1949-10-17
-          birthName: birthName
+      type: object
       properties:
         financingTerm:
-          description: ''' Duration in months, depending on individual shop conditions
-            and order value (please check your ratenkauf widget). Will be set to default
-            value if not available. '''
-          example: 6
           type: integer
+          example: 6
+          description: '''
+          Duration in months, depending on individual shop conditions and order value (please check your ratenkauf widget).
+          Will be set to default value if not available.
+          '''
         orderDetails:
           $ref: '#/components/schemas/OrderDetails'
         shopsystem:
@@ -520,190 +214,107 @@ components:
         redirectLinks:
           $ref: '#/components/schemas/RedirectLinks'
       required:
-      - customer
-      - orderDetails
-      - redirectLinks
-      - shopIdentifier
-      type: object
+        - shopIdentifier
+        - orderDetails
+        - customer
+        - redirectLinks
     TransactionUpdateRequest:
-      example:
-        numberOfProductsInShoppingCart: 2
-        shoppingCartInformation:
-        - quantity: 1
-          articleNumber:
-          - number: "1111111"
-            numberType: GTIN
-          - number: "1111111"
-            numberType: GTIN
-          price: 599.95
-          productName: Washing Machine
-          manufacturer: Siemens
-          productCategory: Household Appliances
-        - quantity: 1
-          articleNumber:
-          - number: "1111111"
-            numberType: GTIN
-          - number: "1111111"
-            numberType: GTIN
-          price: 599.95
-          productName: Washing Machine
-          manufacturer: Siemens
-          productCategory: Household Appliances
-        orderValue: 2614.79
+      type: object
       properties:
         orderValue:
           description: Amount in €
-          example: 2614.79
-          maximum: 10000
-          minimum: 199
           type: number
+          minimum: 199
+          maximum: 10000
+          example: 2614.79
         numberOfProductsInShoppingCart:
-          example: 2
           type: integer
+          example: 2
         shoppingCartInformation:
-          items:
-            $ref: '#/components/schemas/ShoppingCartInformationItem'
-          minItems: 1
-          type: array
+          $ref: '#/components/schemas/ShoppingCartInformation'
       required:
-      - orderValue
-      type: object
+        - orderValue
     Shopsystem:
       description: technischeShopparameter
-      example:
-        shopSystemModuleVersion: 1.6.3
-        shopSystemManufacturer: Shopware 5.5.10
+      type: object
       properties:
         shopSystemManufacturer:
           description: Shop system manufacturer
-          example: Shopware 5.5.10
           type: string
+          example: Shopware 5.5.10
         shopSystemModuleVersion:
           description: Shop system module version
-          example: 1.6.3
           type: string
-      type: object
+          example: 1.6.3
     OrderDetails:
-      example:
-        orderId: A1ZU560
-        numberOfProductsInShoppingCart: 2
-        invoiceAddress:
-          zip: "90471"
-          country: DE
-          address: Beuthener Str. 25
-          city: Nürnberg
-          additionalAddressInformation: 3 OG
-        shoppingCartInformation:
-        - quantity: 1
-          articleNumber:
-          - number: "1111111"
-            numberType: GTIN
-          - number: "1111111"
-            numberType: GTIN
-          price: 599.95
-          productName: Washing Machine
-          manufacturer: Siemens
-          productCategory: Household Appliances
-        - quantity: 1
-          articleNumber:
-          - number: "1111111"
-            numberType: GTIN
-          - number: "1111111"
-            numberType: GTIN
-          price: 599.95
-          productName: Washing Machine
-          manufacturer: Siemens
-          productCategory: Household Appliances
-        orderValue: 2614.79
+      type: object
       properties:
         orderValue:
           description: Amount in €
-          example: 2614.79
           type: number
+          example: 2614.79
         orderId:
-          description: Shop transaction identifier (allows the shop to store its own
-            reference for the transaction)
-          example: A1ZU560
-          maxLength: 50
-          pattern: '[a-zA-Z0-9\.:\-_/]*'
+          description: Shop transaction identifier (allows the shop to store its own reference for the transaction)
           type: string
+          example: A1ZU560
+          pattern: "[a-zA-Z0-9\\.:\\-_/]*"
+          maxLength: 50
         numberOfProductsInShoppingCart:
           description: anzahlProdukteImWarenkorb
-          example: 2
           type: integer
+          example: 2
         invoiceAddress:
           $ref: '#/components/schemas/Address'
         shippingAddress:
           $ref: '#/components/schemas/ShippingAddress'
         shoppingCartInformation:
-          items:
-            $ref: '#/components/schemas/ShoppingCartInformationItem'
-          minItems: 1
-          type: array
+          $ref: '#/components/schemas/ShoppingCartInformation'
       required:
-      - invoiceAddress
-      - orderValue
-      - shippingAddress
-      type: object
+        - orderValue
+        - invoiceAddress
+        - shippingAddress
     Customer:
-      example:
-        firstName: Max
-        lastName: Müller
-        birthPlace: birthPlace
-        bank:
-          iban: DE123456789012345678909
-        gender: MR
-        contact:
-          mobilePhoneNumber: "17186397426"
-          skipMobilePhoneNumberCheck: false
-          phoneNumber: phoneNumber
-          email: test@test.de
-        employment:
-          monthlyNetIncome: 3000
-          employmentType: EMPLOYEE
-        title: PROFDR
-        birthDate: 1949-10-17
-        birthName: birthName
+      type: object
       properties:
         gender:
           description: MR = HERR, MRS = FRAU, DIVERS = DIVERS, NO_GENDER = OHNE
+          type: string
           enum:
-          - MR
-          - MRS
-          - DIVERS
-          - NO_GENDER
-          type: string
+            - MR
+            - MRS
+            - DIVERS
+            - NO_GENDER
         firstName:
+          type: string
           example: Max
-          maxLength: 27
           minLength: 2
-          pattern: '[-a-zA-ZäüößÄÖÜ\.\, ]*'
-          type: string
+          maxLength: 27
+          pattern: "[-a-zA-ZäüößÄÖÜ\\.\\, ]*"
         lastName:
+          type: string
           example: Müller
-          maxLength: 27
           minLength: 2
-          pattern: '[-a-zA-ZäüößÄÖÜ\.\, ]*'
-          type: string
+          maxLength: 27
+          pattern: "[-a-zA-ZäüößÄÖÜ\\.\\, ]*"
         birthDate:
-          example: 1949-10-17
           type: string
+          example: '1949-10-17'
         birthName:
           description: Buyer birth name
-          maxLength: 27
-          minLength: 2
-          pattern: '[-a-zA-ZäüößÄÖÜ\.\, ]*'
           type: string
+          minLength: 2
+          maxLength: 27
+          pattern: "[-a-zA-ZäüößÄÖÜ\\.\\, ]*"
         birthPlace:
           description: Buyer birth place
           type: string
         title:
-          enum:
-          - PROFDR
-          - DR
-          - PROF
-          - DRDR
           type: string
+          enum:
+            - PROFDR
+            - DR
+            - PROF
+            - DRDR
         contact:
           $ref: '#/components/schemas/Contact'
         bank:
@@ -711,396 +322,433 @@ components:
         employment:
           $ref: '#/components/schemas/Employment'
       required:
-      - contact
-      - firstName
-      - lastName
-      type: object
+        - firstName
+        - lastName
+        - contact
     Employment:
-      example:
-        monthlyNetIncome: 3000
-        employmentType: EMPLOYEE
+      type: object
       properties:
         employmentType:
-          description: EMPLOYEE = ANGESTELLTER, EMPLOYEE_PUBLIC_SECTOR = ANGESTELLTER_OEFFENTLICHER_DIENST,
-            WORKER = ARBEITER, CIVIL_SERVANT = BEAMTER, RETIREE = RENTNER, SELF_EMPLOYED
-            = SELBSTAENDIGER, UNEMPLOYED = ARBEITSLOSER, OTHER = SONSTIGES
-          enum:
-          - EMPLOYEE
-          - EMPLOYEE_PUBLIC_SECTOR
-          - WORKER
-          - CIVIL_SERVANT
-          - RETIREE
-          - SELF_EMPLOYED
-          - UNEMPLOYED
-          - OTHER
           type: string
+          description: EMPLOYEE = ANGESTELLTER, EMPLOYEE_PUBLIC_SECTOR = ANGESTELLTER_OEFFENTLICHER_DIENST, WORKER = ARBEITER, CIVIL_SERVANT = BEAMTER, RETIREE = RENTNER, SELF_EMPLOYED = SELBSTAENDIGER, UNEMPLOYED = ARBEITSLOSER, OTHER = SONSTIGES
+          enum:
+            - EMPLOYEE
+            - EMPLOYEE_PUBLIC_SECTOR
+            - WORKER
+            - CIVIL_SERVANT
+            - RETIREE
+            - SELF_EMPLOYED
+            - UNEMPLOYED
+            - OTHER
         monthlyNetIncome:
           description: Income in €
-          example: 3000
           type: number
-      type: object
+          example: 3000
     Address:
-      example:
-        zip: "90471"
-        country: DE
-        address: Beuthener Str. 25
-        city: Nürnberg
-        additionalAddressInformation: 3 OG
+      type: object
       properties:
         address:
           description: Street and street number
-          example: Beuthener Str. 25
           type: string
+          example: Beuthener Str. 25
         additionalAddressInformation:
+          type: string
           example: 3 OG
           maxLength: 50
-          type: string
         zip:
           description: Postal code
-          example: "90471"
           type: string
+          example: 90471
         city:
-          example: Nürnberg
           type: string
+          example: Nürnberg
         country:
           description: Country as 2-digit ISO code
-          example: DE
           type: string
+          example: DE
       required:
-      - address
-      - city
-      - country
-      - zip
-      type: object
+        - address
+        - zip
+        - city
+        - country
     ShippingAddress:
       allOf:
-      - $ref: '#/components/schemas/Address'
-      - $ref: '#/components/schemas/ShippingAddress_allOf'
+        - $ref: '#/components/schemas/Address'
+        - type: object
+          properties:
+            firstName:
+              description: Should match with the first name given in the person data
+              type: string
+            lastName:
+              description: Should match with the last name given in the person data
+              type: string
+          required:
+            - firstName
+            - lastName
     Contact:
-      example:
-        mobilePhoneNumber: "17186397426"
-        skipMobilePhoneNumberCheck: false
-        phoneNumber: phoneNumber
-        email: test@test.de
+      type: object
       properties:
         email:
+          type: string
           example: test@test.de
           maxLength: 80
-          type: string
         mobilePhoneNumber:
-          description: Required in Ratenkauf process. Can be added later if not presented
-            when initializing.
-          example: "17186397426"
+          description: Required in Ratenkauf process. Can be added later if not presented when initializing.
           type: string
+          example: 017186397426
         skipMobilePhoneNumberCheck:
           description: true if the field mobile phone number should not be checked
-          example: false
           type: boolean
+          example: false
         phoneNumber:
           description: Customer phone number.
           type: string
       required:
-      - email
-      type: object
+        - email
     Bank:
       description: International Bank Account Number
-      example:
-        iban: DE123456789012345678909
+      type: object
       properties:
         iban:
-          example: DE123456789012345678909
           type: string
-      type: object
+          example: DE123456789012345678909
     CustomerRelationship:
       description: Risk relevant information
-      example:
-        customerStatus: NEW_CUSTOMER
-        customerSince: 2007-10-10T00:00:00.000+0000
-        orderDoneWithLogin: false
-        riskyItemsInShoppingCart: false
-        logisticsServiceProvider: Hermes
-        numberOfOrders: 3
-        negativePaymentInformation: NO_PAYMENT_DISRUPTION
+      type: object
       properties:
         customerStatus:
-          description: NEW_CUSTOMER = NEUKUNDE, EXISTING_CUSTOMER = BESTANDSKUNDE,
-            PREMIUM_CUSTOMER = PREMIUMKUNDE
+          description: NEW_CUSTOMER = NEUKUNDE, EXISTING_CUSTOMER = BESTANDSKUNDE, PREMIUM_CUSTOMER = PREMIUMKUNDE
+          type: string
           enum:
-          - NEW_CUSTOMER
-          - EXISTING_CUSTOMER
-          - PREMIUM_CUSTOMER
-          type: string
+            - NEW_CUSTOMER
+            - EXISTING_CUSTOMER
+            - PREMIUM_CUSTOMER
         customerSince:
-          example: 2007-10-10
-          format: date
           type: string
+          format: date
+          example: '2007-10-10'
         orderDoneWithLogin:
           description: true if the order was placed via customer login
-          example: false
           type: boolean
+          example: false
         numberOfOrders:
-          example: 3
           type: integer
+          example: 3
         negativePaymentInformation:
-          description: Indicates whether the customer has already been in late payment
-            or has not made the payment -> NO_PAYMENT_DISRUPTION = KEINE_ZAHLUNGSSTOERUNGEN,
-            PAYMENT_DELAY = ZAHLUNGSVERZOEGERUNG, PAYMENT_NOT_DONE = ZAHLUNGSAUSFALL,
-            NO_INFORMATION = KEINE_INFORMATION
-          enum:
-          - NO_PAYMENT_DISRUPTION
-          - PAYMENT_DELAY
-          - PAYMENT_NOT_DONE
-          - NO_INFORMATION
+          description: Indicates whether the customer has already been in late payment or has not made the payment -> NO_PAYMENT_DISRUPTION = KEINE_ZAHLUNGSSTOERUNGEN, PAYMENT_DELAY = ZAHLUNGSVERZOEGERUNG, PAYMENT_NOT_DONE = ZAHLUNGSAUSFALL, NO_INFORMATION = KEINE_INFORMATION
           type: string
+          enum:
+            - NO_PAYMENT_DISRUPTION
+            - PAYMENT_DELAY
+            - PAYMENT_NOT_DONE
+            - NO_INFORMATION
         riskyItemsInShoppingCart:
           description: risikoartikelImWarenkorb
-          example: false
           type: boolean
+          example: false
         logisticsServiceProvider:
           description: Logistics service provider for the delivery of the order
-          example: Hermes
           type: string
+          example: Hermes
       required:
-      - orderDoneWithLogin
-      type: object
+        - orderDoneWithLogin
     RedirectLinks:
       description: Redirect url addresses in case of success, cancellation and denial
-      example:
-        urlSuccess: https://www.poolpowershop.de/payment_easycredit/return
-        urlPreAuthorizationCallback: urlPreAuthorizationCallback
-        urlDenial: https://zoolatino.de/module/easycreditratenkauf/denied
-        urlCancellation: https://zoolatino.de/module/easycreditratenkauf/canceled
+      type: object
       properties:
         urlSuccess:
           description: urlErfolg -> Return url address if the transaction is successful
-          example: https://www.poolpowershop.de/payment_easycredit/return
           type: string
+          example: https://www.poolpowershop.de/payment_easycredit/return
         urlCancellation:
           description: urlAbbruch -> Return url address if the transaction is canceled
-          example: https://zoolatino.de/module/easycreditratenkauf/canceled
           type: string
+          example: https://zoolatino.de/module/easycreditratenkauf/canceled
         urlDenial:
           description: urlAblehnung -> Return url address if the transaction is denied
-          example: https://zoolatino.de/module/easycreditratenkauf/denied
           type: string
+          example: https://zoolatino.de/module/easycreditratenkauf/denied
         urlPreAuthorizationCallback:
-          description: ''' Optional Callback-Url for preAuthorization endpoint. If
-            provided the callback will be performed, else not. '''
+          description: '''
+          Optional Callback-Url for preAuthorization endpoint.
+          If provided the callback will be performed, else not.
+          '''
           type: string
       required:
-      - urlCancellation
-      - urlDenial
-      - urlSuccess
-      type: object
+        - urlSuccess
+        - urlCancellation
+        - urlDenial
     ShoppingCartInformation:
+      type: array
+      minItems: 1
       items:
         $ref: '#/components/schemas/ShoppingCartInformationItem'
-      minItems: 1
-      type: array
     ShoppingCartInformationItem:
-      example:
-        quantity: 1
-        articleNumber:
-        - number: "1111111"
-          numberType: GTIN
-        - number: "1111111"
-          numberType: GTIN
-        price: 599.95
-        productName: Washing Machine
-        manufacturer: Siemens
-        productCategory: Household Appliances
+      type: object
       properties:
         productName:
-          example: Washing Machine
           type: string
+          example: Washing Machine
         quantity:
-          example: 1
           type: integer
+          example: 1
         price:
           description: Amount in €
-          example: 599.95
           type: number
+          example: 599.95
         manufacturer:
+          type: string
           example: Siemens
-          type: string
         productCategory:
-          example: Household Appliances
           type: string
+          example: Household Appliances
         articleNumber:
           description: Article number of a product
+          type: array
           items:
             $ref: '#/components/schemas/ArticleNumberItem'
-          type: array
       required:
-      - price
-      - productName
-      - quantity
-      type: object
+        - productName
+        - quantity
+        - price
     ArticleNumberItem:
-      example:
-        number: "1111111"
-        numberType: GTIN
+      type: object
       properties:
         numberType:
           description: Number type of the article
-          example: GTIN
           type: string
+          example: GTIN
         number:
           description: Article number of the given type
-          example: "1111111"
           type: string
+          example: 1111111
       required:
-      - number
-      - numberType
-      type: object
+        - numberType
+        - number
     IntegrationCheckResponse:
+      type: object
       properties:
         message:
+          type: string
           description: Same message that was sent in the corresponding request
           example: ratenkauf by easyCredit
-          type: string
-      type: object
     WebshopResponse:
-      example:
-        interestRate: 8.5
-        minFinancingAmount: 200
-        maxFinancingAmount: 10000
-        testMode: false
-        availability: true
+      type: object
       properties:
         maxFinancingAmount:
+          type: integer
           example: 10000
-          type: integer
         minFinancingAmount:
-          example: 200
           type: integer
+          example: 200
         interestRate:
-          example: 8.5
           type: number
+          example: 8.50
         availability:
           description: true if financing is available from this webshop
-          example: true
           type: boolean
+          example: true
         testMode:
           description: true if the webshop is in test mode
-          example: false
           type: boolean
-      type: object
+          example: false
+        privacyApprovalForm:
+          description: form for privacy approval
+          type: string
     TransactionInitResponse:
+      type: object
       properties:
         technicalTransactionId:
           description: Unique TeamBank transaction identifier
-          example: 1.de.4145.1-0303135329-211
           type: string
+          example: 1.de.4145.1-0303135329-211
         transactionId:
           description: Unique functional transaction identifier (consists of 6 characters)
-          example: EWZEN7
           type: string
+          example: EWZEN7
         deviceIdentToken:
           description: Verification token to identify the device
+          type: string
           example: bd982c1b-f830-4ebc-9cfd-6ca28c17adeb
-          type: string
         timestamp:
-          example: 2021-03-04T14:41:09.002Z
-          format: date-time
           type: string
-      type: object
+          format: date-time
+          example: '2021-03-04T14:41:09.002Z'
     TransactionSummaryResponse:
+      type: object
       properties:
         orderValue:
           description: Amount of the order value in € ( = Bestellwert in €)
+          type: number
           example: 2614.79
-          type: number
         interest:
-          description: Amount of the interest accrued in € ( = anfallender Zinsbetrag
-            in €)
-          example: 234.56
+          description: Amount of the interest accrued in € ( = anfallender Zinsbetrag in €)
           type: number
+          example: 234.56
         totalValue:
           description: Amount of the total value in € ( = Gesamtsumme in €)
-          example: 2849.35
           type: number
+          example: 2849.35
         decisionOutcome:
           description: Outcome of the credit decision
-          enum:
-          - POSITIVE
-          - NEGATIVE
-          example: POSITIVE
           type: string
+          example: POSITIVE
+          enum:
+            - POSITIVE
+            - NEGATIVE
         numberOfInstallments:
-          description: Number of Installments defined in the payment plan ( = anzahl
-            der Raten)
-          example: 9
+          description: Number of Installments defined in the payment plan ( = anzahl der Raten)
           type: integer
+          example: 9
         installment:
-          description: Amount in € of a single installment according to the payment
-            plan ( = betrag der Rate in €)
+          description: Amount in € of a single installment according to the payment plan ( = betrag der Rate in €)
+          type: number
           example: 302
-          type: number
         lastInstallment:
-          description: Amount  in € of the last installment according to the payment
-            plan ( = betrag der letzten Rate in €)
-          example: 293.58
+          description: Amount  in € of the last installment according to the payment plan ( = betrag der letzten Rate in €)
           type: number
-      type: object
+          example: 293.58
     AuthorizationStatusResponse:
+      type: object
       properties:
         status:
-          enum:
-          - PREAUTHORIZED
-          - PENDING
-          - CANCELED
           type: string
-      type: object
+          enum:
+            - PREAUTHORIZED
+            - PENDING
+            - CANCELED
     ConstraintViolation:
+      type: object
       properties:
         title:
           type: string
         violations:
-          items:
-            $ref: '#/components/schemas/ConstraintViolation_violations'
-          minItems: 1
           type: array
+          minItems: 1
+          items:
+            type: object
+            properties:
+              field:
+                type: string
+              message:
+                type: string
+            required:
+              - field
+              - message
       required:
-      - title
-      - violations
-      type: object
+        - title
+        - violations
     ServerError:
+      type: object
       properties:
         title:
           type: string
         detail:
           type: string
-      type: object
     AuthenticationError:
+      type: object
       properties:
         title:
           type: string
         detail:
           type: string
-      type: object
-    ShippingAddress_allOf:
-      properties:
-        firstName:
-          description: Should match with the first name given in the person data
-          type: string
-        lastName:
-          description: Should match with the last name given in the person data
-          type: string
-      required:
-      - firstName
-      - lastName
-    ConstraintViolation_violations:
-      properties:
-        field:
-          type: string
-        message:
-          type: string
-      required:
-      - field
-      - message
-  securitySchemes:
-    basicAuth:
-      description: username/password -> webshop id/ratenkauf token
-      scheme: basic
-      type: http
+  parameters:
+    technicalTransactionId:
+      name: technicalTransactionId
+      in: path
+      description: Unique TeamBank transaction identifier
+      required: true
+      schema:
+        type: string
+  requestBodies:
+    IntegrationCheckRequest:
+      description: integration check request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/IntegrationCheckRequest'
+    TransactionInitRequest:
+      description: init request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/TransactionInitRequest'
+    TransactionUpdateRequest:
+      description: update request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/TransactionUpdateRequest'
+  responses:
+    default:
+      description: Internal server error or error from third party services
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ServerError'
+    IntegrationCheckResponse:
+      description: The authentication credentials and, if enabled, the body signature are valid
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/IntegrationCheckResponse'
+    AuthorizationStatusResponse:
+      description: Status of an authorization
+      content:
+        application/hal+json:
+          schema:
+            $ref: '#/components/schemas/AuthorizationStatusResponse'
+    WebshopResponse:
+      description: Ratenkauf information about a webshop
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/WebshopResponse'
+    TransactionInitResponse:
+      description: Transaction data
+      content:
+        application/hal+json:
+          schema:
+            $ref: '#/components/schemas/TransactionInitResponse'
+    TransactionUpdateResponse:
+      description: Transaction updated data
+      content:
+        application/hal+json:
+          schema:
+            $ref: '#/components/schemas/TransactionSummaryResponse'
+    TransactionSummaryResponse:
+      description: Transaction summary data for checkout
+      content:
+        application/hal+json:
+          schema:
+            $ref: '#/components/schemas/TransactionSummaryResponse'
+    ConstraintViolationError:
+      description: The request is invalid and has one or more constraint violations.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ConstraintViolation'
+    AuthenticationError:
+      description: The request has not been applied because it lacks valid authentication credentials.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/AuthenticationError'
+    ForbiddenError:
+      description: The request could not be completed due to permanent denial of access to a resource or entity.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ConstraintViolation'
+    NotFoundError:
+      description: The request could not be completed due to an entity that was not found.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ConstraintViolation'
+    ConflictError:
+      description: The request could not be completed due to a conflict.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ConstraintViolation'
