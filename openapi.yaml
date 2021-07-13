@@ -2,7 +2,7 @@ openapi: 3.0.2
 info:
   title: Ratenkauf Verkauf-V3 API Definition
   description: Ratenkauf Verkauf-V3 API for ratenkauf App
-  version: V3.70.0
+  version: V3.72.1
 tags:
   - name: webshop
     description: endpoints for operations regarding a webshop
@@ -107,6 +107,26 @@ paths:
           $ref: '#/components/responses/ForbiddenError'
         '404':
           $ref: '#/components/responses/NotFoundError'
+    get:
+      summary: Get the necessary information about the transaction
+      description: Based on the unique TeamBank identifier, transaction's specific data is returned. Supports body signature.
+      tags:
+        - transaction
+      security:
+        - basicAuth: [ ]
+      parameters:
+        - $ref: '#/components/parameters/technicalTransactionId'
+      responses:
+        '200':
+          $ref: '#/components/responses/TransactionInformationResponse'
+        '400':
+          $ref: '#/components/responses/ConstraintViolationError'
+        '401':
+          $ref: '#/components/responses/AuthenticationError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
   /api/payment/v3/transaction/{technicalTransactionId}/summary:
     get:
       summary: Get the necessary information regarding the transaction for checkout
@@ -152,11 +172,10 @@ paths:
           $ref: '#/components/responses/AuthenticationError'
         '404':
           $ref: '#/components/responses/NotFoundError'
-  /api/payment/v3/transaction/{technicalTransactionId}/preAuthorization:
     post:
-      summary: Preauthorizes a transaction after finishing the process in a webshop
+      summary: Authorizes a transaction after finishing the process in a webshop
       description: '''
-        The preauthorization of a transaction will be triggered asynchronous.
+        The authorization of a transaction will be triggered asynchronous.
         After processing all necessary checks there will be an optional callback to the url that was provided in initialization and you can get the
         updated status information.
         '''
@@ -166,6 +185,8 @@ paths:
         - basicAuth: [ ]
       parameters:
         - $ref: '#/components/parameters/technicalTransactionId'
+      requestBody:
+        $ref: '#/components/requestBodies/AuthorizationRequest'
       responses:
         '202':
           description: accepted for processing
@@ -273,6 +294,15 @@ components:
         - orderValue
         - invoiceAddress
         - shippingAddress
+    AuthorizationRequest:
+      type: object
+      properties:
+        orderId:
+          description: Shop transaction identifier (allows the shop to store its own reference for the transaction)
+          type: string
+          example: A1ZU560
+          pattern: "[a-zA-Z0-9\\.:\\-_/]*"
+          maxLength: 50
     Customer:
       type: object
       properties:
@@ -468,9 +498,9 @@ components:
           description: urlAblehnung -> Return url address if the transaction is denied
           type: string
           example: https://zoolatino.de/module/easycreditratenkauf/denied
-        urlPreAuthorizationCallback:
+        urlAuthorizationCallback:
           description: '''
-          Optional Callback-Url for preAuthorization endpoint.
+          Optional Callback-Url for authorization endpoint.
           If provided the callback will be performed, else not.
           '''
           type: string
@@ -608,13 +638,27 @@ components:
           description: Amount  in € of the last installment according to the payment plan ( = betrag der letzten Rate in €)
           type: number
           example: 293.58
+    TransactionInformationResponse:
+      type: object
+      properties:
+        decision:
+          $ref: '#/components/schemas/TransactionSummaryResponse'
+        transaction:
+          $ref: '#/components/schemas/TransactionInitResponse'
+        status:
+          type: string
+          enum:
+            - OPEN
+            - PREAUTHORIZED
+            - AUTHORIZED
+            - EXPIRED
     AuthorizationStatusResponse:
       type: object
       properties:
         status:
           type: string
           enum:
-            - PREAUTHORIZED
+            - AUTHORIZED
             - PENDING
             - CANCELED
     ConstraintViolation:
@@ -661,6 +705,12 @@ components:
       schema:
         type: string
   requestBodies:
+    AuthorizationRequest:
+      description: authorization request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/AuthorizationRequest'
     IntegrationCheckRequest:
       description: integration check request
       content:
@@ -722,6 +772,12 @@ components:
         application/hal+json:
           schema:
             $ref: '#/components/schemas/TransactionSummaryResponse'
+    TransactionInformationResponse:
+      description: Transaction information data
+      content:
+        application/hal+json:
+          schema:
+            $ref: '#/components/schemas/TransactionInformationResponse'
     ConstraintViolationError:
       description: The request is invalid and has one or more constraint violations.
       content:
