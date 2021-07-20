@@ -2,7 +2,7 @@ openapi: 3.0.2
 info:
   title: Ratenkauf Verkauf-V3 API Definition
   description: Ratenkauf Verkauf-V3 API for ratenkauf App
-  version: V3.72.1
+  version: V3.73.0
 tags:
   - name: webshop
     description: endpoints for operations regarding a webshop
@@ -644,12 +644,13 @@ components:
         decision:
           $ref: '#/components/schemas/TransactionSummaryResponse'
         transaction:
-          $ref: '#/components/schemas/TransactionInitResponse'
+          $ref: '#/components/requestBodies/TransactionInitRequest'
         status:
           type: string
           enum:
             - OPEN
             - PREAUTHORIZED
+            - DECLINED
             - AUTHORIZED
             - EXPIRED
     AuthorizationStatusResponse:
