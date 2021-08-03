@@ -1,4 +1,7 @@
 openapi: 3.0.2
+servers:
+- url: https://ratenkauf.easycredit.de/
+  description: The production API server
 info:
   title: Ratenkauf Verkauf-V3 API Definition
   description: Ratenkauf Verkauf-V3 API for ratenkauf App
