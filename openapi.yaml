@@ -241,6 +241,7 @@ components:
         - shopIdentifier
         - orderDetails
         - customer
+        - customerRelationship
         - redirectLinks
     TransactionUpdateRequest:
       type: object
