@@ -194,6 +194,7 @@ components:
         - shopIdentifier
         - orderDetails
         - customer
+        - customerRelationship
         - redirectLinks
     TransactionUpdate:
       type: object
